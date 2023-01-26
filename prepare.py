@@ -136,20 +136,15 @@ def mm_scaler(train, val, test, col_list):
     scaled data for all three data splits
     '''
     # calls the Min Max Scaler function and fits to train data
-    mm_scale = MinMaxScaler()
-    mm_scale.fit(train[col_list])
+    mm_scaler = MinMaxScaler()
+    mm_scaler.fit(train[col_list])
     
     # transforms all three data sets
-    mm_train = mm_scale.transform(train[col_list])
-    mm_val = mm_scale.transform(val[col_list])
-    mm_test = mm_scale.transform(test[col_list])
+    train[col_list] = mm_scaler.transform(train[col_list])
+    val[col_list] = mm_scaler.transform(val[col_list])
+    test[col_list] = mm_scaler.transform(test[col_list])
     
-    # converts all three transformed data sets to pandas DataFrames
-    mm_train = pd.DataFrame(mm_train, columns=col_list)
-    mm_val = pd.DataFrame(mm_val, columns=col_list)
-    mm_test = pd.DataFrame(mm_test, columns=col_list)
-    
-    return mm_train, mm_val, mm_test
+    return train, val, test
 
 def ss_scaler(train, val, test, col_list):
     
@@ -163,16 +158,11 @@ def ss_scaler(train, val, test, col_list):
     ss_scale.fit(train[col_list])
     
     # transforms all three data sets
-    ss_train = ss_scale.transform(train[col_list])
-    ss_val = ss_scale.transform(val[col_list])
-    ss_test = ss_scale.transform(test[col_list])
+    train[col_list] = ss_scale.transform(train[col_list])
+    val[col_list] = ss_scale.transform(val[col_list])
+    test[col_list] = ss_scale.transform(test[col_list])
     
-    # converts all three transformed data sets to pandas Data Frames
-    ss_train = pd.DataFrame(ss_train, columns=col_list)
-    ss_val = pd.DataFrame(ss_val, columns=col_list)
-    ss_test = pd.DataFrame(ss_test, columns=col_list)
-    
-    return ss_train, ss_val, ss_test
+    return train, val, test
 
 def rs_scaler(train, val, test, col_list):
     
@@ -186,16 +176,11 @@ def rs_scaler(train, val, test, col_list):
     rs_scale.fit(train[col_list])
     
     # transforms all three data sets
-    rs_train = rs_scale.transform(train[col_list])
-    rs_val = rs_scale.transform(val[col_list])
-    rs_test = rs_scale.transform(test[col_list])
+    train[col_list] = rs_scale.transform(train[col_list])
+    val[col_list] = rs_scale.transform(val[col_list])
+    test[col_list] = rs_scale.transform(test[col_list])
     
-    # converts transformed data into pandas Data Frames
-    rs_train = pd.DataFrame(rs_train, columns=col_list)
-    rs_val = pd.DataFrame(rs_val, columns=col_list)
-    rs_test = pd.DataFrame(rs_test, columns=col_list)
-    
-    return rs_train, rs_val, rs_test
+    return train, val, test
 
 def qt_scaler(train, val, test, col_list, dist='normal'):
     
@@ -209,23 +194,19 @@ def qt_scaler(train, val, test, col_list, dist='normal'):
     qt_scale.fit(train[col_list])
     
     # transforms all three data sets
-    qt_train = qt_scale.transform(train[col_list])
-    qt_val = qt_scale.transform(val[col_list])
-    qt_test = qt_scale.transform(test[col_list])
+    train[col_list] = qt_scale.transform(train[col_list])
+    val[col_list] = qt_scale.transform(val[col_list])
+    test[col_list] = qt_scale.transform(test[col_list])
     
-    # converts all three transformed data sets to pandas Data Frames
-    qt_train = pd.DataFrame(qt_train, columns=col_list)
-    qt_val = pd.DataFrame(qt_val, columns=col_list)
-    qt_test = pd.DataFrame(qt_test, columns=col_list)
-    
-    return qt_train, qt_val, qt_test
+    return train, val, test
 
 
-def remove_outliers(df, k=1.5):
+def remove_outliers(df, num=8, k=1.5):
 
     '''
-    This function is to remove the top 25% and bottom 25% of the data for each column.
-    This removes the top and bottom 50% for every column to ensure all outliers are gone.
+    This function is to remove the data above the upper fence and below the lower fence for each column.
+    This removes all data deemed as an outlier and returns more accurate data. It ignores columns that 
+    are categorical and only removes data for continuous columns.
     '''
     a=[]
     b=[]
@@ -234,34 +215,28 @@ def remove_outliers(df, k=1.5):
     col_list = []
     i=0
     for col in df:
-            new_df=np.where(df[col].nunique()>8, True, False)
-            if new_df==True:
+            new_df=np.where(df[col].nunique()>num, True, False)
+            if new_df:
                 if df[col].dtype == 'float' or df[col].dtype == 'int':
-                    '''
-                    for each feature find the first and third quartile
-                    '''
+
+                    # for each feature find the first and third quartile
                     q1, q3 = df[col].quantile([.25, .75])
-                    '''
-                    calculate inter quartile range
-                    '''
+
+                    # calculate inter quartile range
                     iqr = q3 - q1
-                    '''
-                    calculate the upper and lower fence
-                    '''
+
+                    # calculate the upper and lower fence
                     upper_fence = q3 + (k * iqr)
                     lower_fence = q1 - (k * iqr)
-                    '''
-                    appending the upper and lower fences to lists
-                    '''
+
+                    # appending the upper and lower fences to lists
                     a.append(upper_fence)
                     b.append(lower_fence)
-                    '''
-                    appending the feature names to a list
-                    '''
+
+                    # appending the feature names to a list
                     features.append(col)
-                    '''
-                    assigning the fences and feature names to a dataframe
-                    '''
+
+                    # assigning the fences and feature names to a dataframe
                     var_fences= pd.DataFrame(fences, columns=features, index=['upper_fence', 'lower_fence'])
                     
                     col_list.append(col)
@@ -270,9 +245,8 @@ def remove_outliers(df, k=1.5):
                     print('column is not a float or int')
             else:
                 print(f'{col} column ignored')
-    '''
-    for loop used to remove the data deemed unecessary 
-    '''
+
+    # for loop used to remove the data deemed unecessary 
     for col in col_list:
         df = df[(df[col]<= a[i]) & (df[col]>= b[i])]
         i+=1
